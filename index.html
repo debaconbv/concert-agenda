@@ -73,7 +73,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .fbtn.on{background:var(--ac2);border-color:var(--ac);color:var(--ac);font-weight:500}
 
 /* List */
-.list{flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:calc(80px + var(--sb))}
+.list{flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:calc(100px + var(--sb))}
 
 /* Card */
 .card{background:var(--sf);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;gap:14px;align-items:flex-start;border:.5px solid var(--bd);-webkit-tap-highlight-color:transparent}
@@ -94,7 +94,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .carr{color:var(--mu2);flex-shrink:0;align-self:center}
 
 /* FAB */
-.fab{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(20px + var(--sb));width:56px;height:56px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(245,166,35,.4);z-index:100;-webkit-tap-highlight-color:transparent}
+.fab{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(76px + var(--sb));width:56px;height:56px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(245,166,35,.4);z-index:100;-webkit-tap-highlight-color:transparent}
 .fab svg{width:26px;height:26px;stroke:#000;stroke-width:2.5;fill:none}
 .fab:active{transform:scale(.94)}
 
@@ -187,6 +187,32 @@ input[type=checkbox].toggle:checked::after{transform:translateX(18px)}
 /* Toast */
 .toast{position:fixed;bottom:calc(24px + var(--sb));left:50%;transform:translateX(-50%) translateY(16px);background:var(--sf2);color:var(--tx);padding:10px 18px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:9999;border:.5px solid var(--bd)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Bottom tab bar */
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:600px;background:rgba(17,17,17,.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--bd);display:flex;padding-bottom:var(--sb);z-index:200}
+.tabbar-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 8px;border:none;background:none;color:var(--mu);cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;font-size:10px;font-weight:500;letter-spacing:.3px}
+.tabbar-btn svg{width:22px;height:22px;stroke-width:2;fill:none;stroke:currentColor}
+.tabbar-btn.active{color:var(--ac)}
+.tabbar-btn.active svg{stroke:var(--ac)}
+
+/* Tickets view */
+.tklist{flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:calc(80px + var(--sb))}
+.tkcard{background:var(--sf);border-radius:14px;border:.5px solid var(--bd);overflow:hidden}
+.tkcard-head{display:flex;align-items:center;gap:14px;padding:14px 16px}
+.tkcard-info{flex:1;min-width:0}
+.tkcard-name{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tkcard-date{font-size:13px;color:var(--ac);margin-top:2px}
+.tkcard-loc{font-size:12px;color:var(--mu);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tkcard-body{border-top:.5px solid var(--bd);padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.tkbtn{display:flex;align-items:center;gap:10px;border:none;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600;cursor:pointer;width:100%;font-family:inherit;text-align:left;text-decoration:none;-webkit-tap-highlight-color:transparent}
+.tkbtn:active{opacity:.8}
+.tkbtn.pdf{background:var(--gr2);color:var(--gr)}
+.tkbtn.pdf svg{stroke:var(--gr);width:20px;height:20px;stroke-width:2.5;fill:none;flex-shrink:0}
+.tkbtn.url{background:var(--ac2);color:var(--ac)}
+.tkbtn.url svg{stroke:var(--ac);width:20px;height:20px;stroke-width:2.5;fill:none;flex-shrink:0}
+.tknotes{background:var(--sf2);border-radius:8px;padding:10px 12px;font-family:'SF Mono',Menlo,monospace;font-size:13px;word-break:break-all;letter-spacing:.4px;line-height:1.6;color:var(--tx)}
+.tkemp{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--mu);font-size:15px;padding-bottom:80px}
+.tkemp-ico{font-size:48px;line-height:1;opacity:.5}
 </style>
 </head>
 <body>
@@ -387,6 +413,15 @@ alter table store disable row level security;</div>
     </div>
   </div>
 
+  <!-- TICKETS -->
+  <div class="view" id="view-tickets">
+    <div class="hdr">
+      <span class="hdr-title">🎟 Mijn Tickets</span>
+      <div class="sync" id="syncdot-tk" title="Synchronisatiestatus"></div>
+    </div>
+    <div class="tklist" id="tklist"></div>
+  </div>
+
   <!-- SETTINGS -->
   <div class="view" id="view-settings">
     <div class="hdr">
@@ -425,6 +460,17 @@ alter table store disable row level security;</div>
 </div>
 <div class="toast" id="toast"></div>
 
+<nav class="tabbar" id="tabbar">
+  <button class="tabbar-btn active" id="tab-agenda" aria-label="Agenda">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Agenda
+  </button>
+  <button class="tabbar-btn" id="tab-tickets" aria-label="Tickets">
+    <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/></svg>
+    Tickets
+  </button>
+</nav>
+
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 const CFG_URL = 'concertagenda_url';
@@ -441,6 +487,7 @@ let pendingImg = null;
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
+  showTabBar(false);
   const url = localStorage.getItem(CFG_URL);
   const key = localStorage.getItem(CFG_KEY);
   if (url && key) {
@@ -508,6 +555,8 @@ async function deletePdf(path) {
 function show(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + id).classList.add('active');
+  const tabbarViews = ['agenda', 'tickets'];
+  showTabBar(tabbarViews.includes(id));
 }
 
 function setSyncing(state) {
@@ -898,6 +947,74 @@ document.getElementById('savebtn').addEventListener('click', async () => {
   }
 });
 
+// ─── TICKETS TAB ─────────────────────────────────────────────────────────────
+function renderTickets() {
+  const today = TODAY();
+  const list = document.getElementById('tklist');
+  const items = [...concerts]
+    .filter(c => c.pdfPath || c.ticketUrl || c.ticketNotes)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (!items.length) {
+    list.innerHTML = `<div class="tkemp"><div class="tkemp-ico">🎟</div>Nog geen tickets toegevoegd</div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(c => {
+    const past = (c.dateEnd || c.date) < today;
+    const dateStr = c.dateEnd ? nlDateRange(c.date, c.dateEnd) : nlDate(c.date);
+    const loc = [c.venue, c.city].filter(Boolean).join(' · ');
+
+    let btns = '';
+    if (c.pdfPath) {
+      btns += `<a class="tkbtn pdf" href="${esc(getPdfUrl(c.pdfPath))}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Ticket PDF openen
+      </a>`;
+    }
+    if (c.ticketUrl) {
+      btns += `<a class="tkbtn url" href="${esc(c.ticketUrl)}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/></svg>
+        Ticket openen
+      </a>`;
+    }
+    const notes = c.ticketNotes ? `<div class="tknotes">${esc(c.ticketNotes)}</div>` : '';
+
+    return `<div class="tkcard${past ? ' past' : ''}">
+      <div class="tkcard-head">
+        <div class="tkcard-info">
+          <div class="tkcard-name">${esc(c.name)}</div>
+          <div class="tkcard-date">${dateStr}${c.time ? ' · ' + esc(c.time) : ''}</div>
+          ${loc ? `<div class="tkcard-loc">${esc(loc)}</div>` : ''}
+        </div>
+      </div>
+      <div class="tkcard-body">${btns}${notes}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── TAB BAR ─────────────────────────────────────────────────────────────────
+let activeMainTab = 'agenda';
+
+function switchTab(tab) {
+  activeMainTab = tab;
+  document.getElementById('tab-agenda').classList.toggle('active', tab === 'agenda');
+  document.getElementById('tab-tickets').classList.toggle('active', tab === 'tickets');
+  if (tab === 'agenda') {
+    show('agenda');
+  } else {
+    renderTickets();
+    show('tickets');
+  }
+}
+
+document.getElementById('tab-agenda').addEventListener('click', () => switchTab('agenda'));
+document.getElementById('tab-tickets').addEventListener('click', () => switchTab('tickets'));
+
+function showTabBar(visible) {
+  document.getElementById('tabbar').style.display = visible ? 'flex' : 'none';
+}
+
 // ─── FILTER ──────────────────────────────────────────────────────────────────
 document.querySelectorAll('.fbtn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -940,8 +1057,8 @@ connBtn.addEventListener('click', async () => {
 });
 
 // ─── NAV ─────────────────────────────────────────────────────────────────────
-document.getElementById('back-d').onclick = () => show('agenda');
-document.getElementById('back-f').onclick = () => { curId ? showDetail(curId) : show('agenda'); };
+document.getElementById('back-d').onclick = () => switchTab(activeMainTab);
+document.getElementById('back-f').onclick = () => { curId ? showDetail(curId) : switchTab(activeMainTab); };
 document.getElementById('back-settings').onclick = () => show('agenda');
 document.getElementById('fab').onclick = () => { curId = null; openForm(null); };
 
