@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Concertagenda</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Concerten">
+<meta name="theme-color" content="#111111">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#111;--sf:#1c1c1e;--sf2:#2c2c2e;--sf3:#3a3a3c;
+  --bd:#3a3a3c;--tx:#f2f2f7;--mu:#8e8e93;--mu2:#636366;
+  --ac:#f5a623;--ac2:rgba(245,166,35,.15);--act:#000;
+  --gr:#30d158;--gr2:rgba(48,209,88,.15);
+  --re:#ff453a;--re2:rgba(255,69,58,.15);
+  --sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px);
+}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+#app{height:100dvh;display:flex;flex-direction:column;max-width:600px;margin:0 auto}
+
+.view{flex:1;overflow-y:auto;display:none;flex-direction:column}
+.view.active{display:flex}
+
+/* Header */
+.hdr{padding:calc(var(--st) + 14px) 16px 12px;background:rgba(17,17,17,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:.5px solid var(--bd);flex-shrink:0;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.hdr-title{font-size:17px;font-weight:600;flex:1}
+.hdr-btn{background:none;border:none;color:var(--ac);font-size:15px;padding:4px 2px;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;flex-shrink:0}
+.hdr-btn svg{width:18px;height:18px;flex-shrink:0}
+
+/* Sync indicator */
+.sync{width:7px;height:7px;border-radius:50%;background:var(--mu2);flex-shrink:0;transition:background .3s}
+.sync.busy{background:var(--ac);animation:pulse 1s infinite}
+.sync.ok{background:var(--gr)}
+.sync.err{background:var(--re)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* Setup screen */
+#view-setup{padding:24px 20px calc(32px + var(--sb));display:flex;flex-direction:column;gap:20px}
+.setup-hdr{font-size:22px;font-weight:700;margin-top:8px}
+.setup-sub{font-size:14px;color:var(--mu);line-height:1.6}
+.setup-step{background:var(--sf);border-radius:12px;padding:14px 16px;display:flex;gap:12px}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--ac);color:var(--act);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-body{flex:1;min-width:0}
+.step-title{font-size:14px;font-weight:600;margin-bottom:4px}
+.step-desc{font-size:13px;color:var(--mu);line-height:1.5}
+.step-code{background:var(--sf2);border-radius:8px;padding:10px 12px;margin-top:8px;font-family:'SF Mono',Menlo,monospace;font-size:12px;color:var(--tx);overflow-x:auto;white-space:pre;border:.5px solid var(--bd)}
+.cfg-row{display:flex;flex-direction:column;gap:6px}
+.cfg-label{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);font-weight:600}
+.cfg-input{background:var(--sf);border:.5px solid var(--bd);border-radius:10px;padding:12px 14px;font-size:15px;color:var(--tx);outline:none;width:100%;font-family:inherit}
+.cfg-input:focus{border-color:var(--ac)}
+.cfg-input::placeholder{color:var(--mu2)}
+.connect-btn{background:var(--ac);color:var(--act);border:none;border-radius:12px;padding:15px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit}
+.connect-btn:active{opacity:.8}
+.connect-btn:disabled{opacity:.35}
+
+/* Filter bar */
+.fbar{display:flex;gap:8px;padding:10px 16px 4px;flex-shrink:0}
+.fbtn{font-size:13px;padding:5px 14px;border-radius:20px;border:.5px solid var(--bd);background:transparent;color:var(--mu);cursor:pointer;font-family:inherit}
+.fbtn.on{background:var(--ac2);border-color:var(--ac);color:var(--ac);font-weight:500}
+
+/* List */
+.list{flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:calc(80px + var(--sb))}
+
+/* Card */
+.card{background:var(--sf);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;gap:14px;align-items:flex-start;border:.5px solid var(--bd);-webkit-tap-highlight-color:transparent}
+.card:active{background:var(--sf2)}
+.card.past{opacity:.5}
+.dblock{flex-shrink:0;text-align:center;min-width:40px}
+.dmon{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ac);font-weight:700}
+.dday{font-size:26px;font-weight:700;line-height:1;color:var(--tx)}
+.dyr{font-size:11px;color:var(--mu)}
+.dblock.soon .dday{color:var(--ac)}
+.cinfo{flex:1;min-width:0}
+.cname{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmeta{font-size:13px;color:var(--mu);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.chip{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--sf2);color:var(--mu);font-weight:500}
+.chip.t{background:var(--gr2);color:var(--gr)}
+.chip.hot{background:var(--ac2);color:var(--ac)}
+.carr{color:var(--mu2);flex-shrink:0;align-self:center}
+
+/* FAB */
+.fab{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(20px + var(--sb));width:56px;height:56px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(245,166,35,.4);z-index:100;-webkit-tap-highlight-color:transparent}
+.fab svg{width:26px;height:26px;stroke:#000;stroke-width:2.5;fill:none}
+.fab:active{transform:scale(.94)}
+
+/* Empty */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--mu);font-size:15px;padding-bottom:80px}
+.empty-ico{font-size:48px;line-height:1;opacity:.5}
+
+/* Detail */
+.dbody{flex:1;overflow-y:auto;padding-bottom:calc(20px + var(--sb))}
+.dhero{padding:20px 16px;border-bottom:.5px solid var(--bd)}
+.dname{font-size:24px;font-weight:700;line-height:1.2;margin-bottom:8px}
+.ddate{font-size:16px;color:var(--ac);font-weight:500;margin-bottom:4px}
+.dloc{font-size:14px;color:var(--mu)}
+.dsec{padding:16px;border-bottom:.5px solid var(--bd)}
+.dlbl{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--mu);font-weight:600;margin-bottom:10px}
+.tbtn{display:flex;align-items:center;gap:10px;border:none;border-radius:12px;padding:15px 18px;font-size:16px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;-webkit-tap-highlight-color:transparent;text-align:left;text-decoration:none}
+.tbtn:active{opacity:.8}
+.tbtn.pdf{background:var(--gr2);color:var(--gr)}
+.tbtn.pdf svg{stroke:var(--gr);width:22px;height:22px;stroke-width:2.5;fill:none;flex-shrink:0}
+.tbtn.url{background:var(--ac);color:var(--act)}
+.tbtn.url svg{stroke:var(--act);width:22px;height:22px;stroke-width:2.5;fill:none;flex-shrink:0}
+.tnotes{background:var(--sf2);border-radius:10px;padding:14px;font-family:'SF Mono',Menlo,monospace;font-size:15px;word-break:break-all;letter-spacing:.5px;line-height:1.6}
+.complist{display:flex;flex-direction:column;gap:8px}
+.comp{display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--ac);flex-shrink:0}
+.ntext{font-size:14px;color:var(--mu);line-height:1.6}
+.dactions{display:flex;gap:10px;padding:16px}
+.abtn{flex:1;padding:13px;border-radius:10px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.abtn:active{opacity:.7}
+.abtn.edit{background:var(--sf2);color:var(--tx)}
+.abtn.del{background:var(--re2);color:var(--re)}
+
+/* Form */
+.fbody{flex:1;overflow-y:auto;padding:16px 16px calc(20px + var(--sb));display:flex;flex-direction:column;gap:18px}
+.fgrp{display:flex;flex-direction:column;gap:6px}
+.flbl{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);font-weight:600}
+.finp,.ftxt{background:var(--sf);border:.5px solid var(--bd);border-radius:10px;padding:12px 14px;font-size:16px;color:var(--tx);outline:none;width:100%;-webkit-appearance:none;font-family:inherit}
+.finp::placeholder,.ftxt::placeholder{color:var(--mu2)}
+.finp:focus,.ftxt:focus{border-color:var(--ac)}
+.ftxt{min-height:80px;resize:vertical}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+input[type=date],input[type=time]{color-scheme:dark}
+
+/* PDF upload area */
+.pdfdrop{border:1.5px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;color:var(--mu);font-size:14px;transition:border-color .2s,background .2s;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;align-items:center;gap:6px}
+.pdfdrop:active,.pdfdrop.drag{border-color:var(--ac);background:var(--ac2);color:var(--ac)}
+.pdfdrop.has{border-color:var(--gr);background:var(--gr2);color:var(--gr)}
+.pdfdrop svg{width:28px;height:28px;stroke-width:1.5;fill:none;flex-shrink:0}
+.pdfdrop:not(.has) svg{stroke:var(--mu)}
+.pdfdrop.has svg{stroke:var(--gr)}
+.pdfdrop.drag svg{stroke:var(--ac)}
+.pdf-clear{font-size:12px;color:var(--re);cursor:pointer;text-decoration:underline;margin-top:2px}
+#fpdf{display:none}
+
+.savebtn{background:var(--ac);color:var(--act);border:none;border-radius:12px;padding:15px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.savebtn:active{opacity:.8}
+.savebtn:disabled{opacity:.35;cursor:default}
+
+/* Spinner */
+.spin-wrap{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--mu);font-size:14px}
+.spinner{width:28px;height:28px;border:2.5px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Toast */
+.toast{position:fixed;bottom:calc(24px + var(--sb));left:50%;transform:translateX(-50%) translateY(16px);background:var(--sf2);color:var(--tx);padding:10px 18px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:9999;border:.5px solid var(--bd)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SETUP / CONFIG -->
+  <div class="view active" id="view-setup">
+    <div class="hdr"><span class="hdr-title">🎵 Concertagenda — Setup</span></div>
+    <div style="flex:1;overflow-y:auto;padding:16px 16px calc(20px + var(--sb));display:flex;flex-direction:column;gap:16px">
+      <p class="setup-sub">Eenmalige setup: maak een gratis Supabase-project aan. Je concerten en tickets worden dan gesynchroniseerd op al je toestellen.</p>
+
+      <div class="setup-step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Maak een gratis account aan</div>
+          <div class="step-desc">Ga naar <strong>supabase.com</strong> → "Start your project" → log in met GitHub.</div>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Nieuw project aanmaken</div>
+          <div class="step-desc">Klik "New project" → kies een naam (bv. <em>concertagenda</em>) → kies een regio dicht bij België (Frankfurt) → klik "Create new project".</div>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Tabel aanmaken</div>
+          <div class="step-desc">Ga naar <strong>SQL Editor</strong> in je project en voer dit uit:</div>
+          <div class="step-code">create table if not exists store (
+  key text primary key,
+  value jsonb not null default '[]'::jsonb
+);
+alter table store disable row level security;</div>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Storage bucket aanmaken</div>
+          <div class="step-desc">Ga naar <strong>Storage</strong> → "New bucket" → naam: <em>tickets</em> → zet "Public bucket" <strong>aan</strong> → klik "Save".</div>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Je project-URL en sleutel ophalen</div>
+          <div class="step-desc">Ga naar <strong>Project Settings → API</strong>. Kopieer de "Project URL" en de "anon public" sleutel hieronder.</div>
+        </div>
+      </div>
+
+      <div class="cfg-row">
+        <label class="cfg-label">Project URL</label>
+        <input class="cfg-input" id="cfg-url" placeholder="https://xxxxxxxxxxxx.supabase.co" type="url" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div class="cfg-row">
+        <label class="cfg-label">Anon Key</label>
+        <input class="cfg-input" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5c..." autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <button class="connect-btn" id="connect-btn" disabled>Verbinden</button>
+    </div>
+  </div>
+
+  <!-- AGENDA -->
+  <div class="view" id="view-agenda">
+    <div class="hdr">
+      <span class="hdr-title">🎵 Concertagenda</span>
+      <div class="sync" id="syncdot" title="Synchronisatiestatus"></div>
+      <button class="hdr-btn" id="settings-btn" title="Instellingen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M19.07 4.93l-1.41 1.41M19.07 4.93 17.66 6.34M4.93 19.07l1.41-1.41"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+      </button>
+    </div>
+    <div class="fbar">
+      <button class="fbtn on" data-f="upcoming">Komend</button>
+      <button class="fbtn" data-f="all">Alles</button>
+      <button class="fbtn" data-f="past">Voorbij</button>
+    </div>
+    <div class="list" id="clist"></div>
+    <button class="fab" id="fab" aria-label="Concert toevoegen">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="view" id="view-detail">
+    <div class="hdr">
+      <button class="hdr-btn" id="back-d">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Agenda
+      </button>
+    </div>
+    <div class="dbody" id="dbody"></div>
+  </div>
+
+  <!-- FORM -->
+  <div class="view" id="view-form">
+    <div class="hdr">
+      <button class="hdr-btn" id="back-f">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Annuleren
+      </button>
+      <span class="hdr-title" id="ftitle">Nieuw concert</span>
+    </div>
+    <div class="fbody">
+      <input type="hidden" id="fid">
+      <input type="hidden" id="fpdf-id">
+      <input type="hidden" id="fpdf-path">
+      <div class="fgrp">
+        <label class="flbl">Artiest / festival *</label>
+        <input class="finp" id="fname" placeholder="Radiohead, Rock Werchter…" autocomplete="off">
+      </div>
+      <div class="frow">
+        <div class="fgrp">
+          <label class="flbl">Datum *</label>
+          <input class="finp" type="date" id="fdate">
+        </div>
+        <div class="fgrp">
+          <label class="flbl">Tijdstip</label>
+          <input class="finp" type="time" id="ftime">
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fgrp">
+          <label class="flbl">Locatie</label>
+          <input class="finp" id="fvenue" placeholder="Ancienne Belgique…">
+        </div>
+        <div class="fgrp">
+          <label class="flbl">Stad</label>
+          <input class="finp" id="fcity" placeholder="Brussel…">
+        </div>
+      </div>
+
+      <div class="fgrp">
+        <label class="flbl">Ticket — PDF uploaden</label>
+        <div class="pdfdrop" id="pdfdrop" role="button" tabindex="0" aria-label="PDF ticket uploaden">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          <span id="pdfdrop-txt">Tik om een ticket-PDF te kiezen</span>
+          <span class="pdf-clear" id="pdf-clear" style="display:none">Verwijderen</span>
+        </div>
+        <input type="file" id="fpdf" accept="application/pdf">
+      </div>
+
+      <div class="fgrp">
+        <label class="flbl">Ticket URL (alternatief of extra)</label>
+        <input class="finp" type="url" id="furl" placeholder="https://…">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Ticket details (barcode, zitplaats…)</label>
+        <textarea class="ftxt" id="fnotes-ticket" placeholder="Rij 5 · Stoel 12&#10;Barcode: ABC1234567…"></textarea>
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Wie gaat mee? (komma-gescheiden)</label>
+        <input class="finp" id="fcomp" placeholder="Judith, Stef, Thomas…">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Notities</label>
+        <textarea class="ftxt" id="fnotes" placeholder="Parking, opkomst, setlist…"></textarea>
+      </div>
+      <button class="savebtn" id="savebtn" disabled>Opslaan</button>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const CFG_URL = 'concertagenda_url';
+const CFG_KEY = 'concertagenda_key';
+const BUCKET  = 'tickets';
+const TODAY   = () => new Date().toISOString().slice(0, 10);
+
+let sb = null;
+let concerts = [];
+let curFilter = 'upcoming';
+let curId = null;
+let pendingPdf = null;  // { file, name }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  const url = localStorage.getItem(CFG_URL);
+  const key = localStorage.getItem(CFG_KEY);
+  if (url && key) {
+    sb = supabase.createClient(url, key);
+    show('agenda');
+    await loadConcerts();
+  } else {
+    show('setup');
+  }
+}
+
+// ─── SUPABASE ────────────────────────────────────────────────────────────────
+async function loadConcerts() {
+  setSyncing('busy');
+  try {
+    const { data, error } = await sb.from('store').select('value').eq('key', 'concerts').maybeSingle();
+    if (error) throw error;
+    concerts = data?.value || [];
+    renderList();
+    setSyncing('ok');
+  } catch (e) {
+    setSyncing('err');
+    toast('Laden mislukt — check verbinding');
+  }
+}
+
+async function saveConcerts() {
+  setSyncing('busy');
+  try {
+    const { error } = await sb.from('store').upsert({ key: 'concerts', value: concerts }, { onConflict: 'key' });
+    if (error) throw error;
+    setSyncing('ok');
+  } catch {
+    setSyncing('err');
+    toast('Opslaan mislukt');
+  }
+}
+
+async function uploadPdf(file, concertId) {
+  const ext = file.name.split('.').pop() || 'pdf';
+  const path = concertId + '/' + Date.now() + '.' + ext;
+  const { data, error } = await sb.storage.from(BUCKET).upload(path, file, { contentType: 'application/pdf', upsert: true });
+  if (error) throw error;
+  return path;
+}
+
+function getPdfUrl(path) {
+  const { data } = sb.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function deletePdf(path) {
+  try { await sb.storage.from(BUCKET).remove([path]); } catch {}
+}
+
+// ─── UI HELPERS ──────────────────────────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+}
+
+function setSyncing(state) {
+  const d = document.getElementById('syncdot');
+  if (d) d.className = 'sync ' + state;
+}
+
+function toast(msg, ms = 2800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function nlDate(d) {
+  if (!d) return '';
+  return new Date(d + 'T12:00:00').toLocaleDateString('nl-BE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+}
+function sMon(d) {
+  if (!d) return '';
+  return new Date(d + 'T12:00:00').toLocaleDateString('nl-BE', { month:'short' }).replace('.','');
+}
+function inits(name) {
+  return name.trim().split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2);
+}
+function daysTo(d) {
+  return Math.round((new Date(d + 'T12:00:00') - new Date()) / 86400000);
+}
+
+// ─── RENDER LIST ─────────────────────────────────────────────────────────────
+function renderList() {
+  const today = TODAY();
+  const list = document.getElementById('clist');
+  let items = [...concerts].sort((a, b) => a.date.localeCompare(b.date));
+  if (curFilter === 'upcoming') items = items.filter(c => c.date >= today);
+  else if (curFilter === 'past')   items = items.filter(c => c.date < today).reverse();
+
+  if (!items.length) {
+    const m = { upcoming:'Geen komende concerten gepland', past:'Geen voorbije concerten', all:'Nog geen concerten toegevoegd' };
+    list.innerHTML = `<div class="empty"><div class="empty-ico">🎸</div>${m[curFilter]}</div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(c => {
+    const past = c.date < today;
+    const dt = new Date(c.date + 'T12:00:00');
+    const days = daysTo(c.date);
+    const soon = !past && days >= 0 && days <= 7;
+    const hasT = c.pdfPath || c.ticketUrl || c.ticketNotes;
+    const comps = c.companions || [];
+    const hotLabel = days === 0 ? 'Vandaag 🔥' : days === 1 ? 'Morgen!' : `Nog ${days} dagen`;
+    const chipsArr = [
+      hasT ? `<span class="chip t">🎟 Ticket</span>` : '',
+      comps.length ? `<span class="chip">👥 ${esc(comps.slice(0,3).join(', '))}${comps.length>3?` +${comps.length-3}`:''}</span>` : '',
+      soon ? `<span class="chip hot">${hotLabel}</span>` : ''
+    ].filter(Boolean);
+    return `<div class="card${past?' past':''}" data-id="${esc(c.id)}">
+      <div class="dblock${soon?' soon':''}">
+        <div class="dmon">${sMon(c.date)}</div>
+        <div class="dday">${dt.getDate()}</div>
+        <div class="dyr">${dt.getFullYear()}</div>
+      </div>
+      <div class="cinfo">
+        <div class="cname">${esc(c.name)}</div>
+        <div class="cmeta">${esc([c.venue,c.city].filter(Boolean).join(' · '))}${c.time?' · '+esc(c.time):''}</div>
+        ${chipsArr.length?`<div class="chips">${chipsArr.join('')}</div>`:''}
+      </div>
+      <div class="carr"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.card').forEach(el =>
+    el.addEventListener('click', () => showDetail(el.dataset.id))
+  );
+}
+
+// ─── DETAIL ──────────────────────────────────────────────────────────────────
+function showDetail(id) {
+  const c = concerts.find(x => x.id === id);
+  if (!c) return;
+  curId = id;
+  const body = document.getElementById('dbody');
+  const comps = c.companions || [];
+
+  let tHtml = '';
+  if (c.pdfPath) {
+    const url = getPdfUrl(c.pdfPath);
+    tHtml += `<a class="tbtn pdf" href="${esc(url)}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Ticket PDF openen
+    </a>`;
+  }
+  if (c.ticketUrl) {
+    tHtml += `<a class="tbtn url" href="${esc(c.ticketUrl)}" target="_blank" rel="noopener" style="margin-top:${c.pdfPath?'10px':'0'}">
+      <svg viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/></svg>
+      Ticket openen
+    </a>`;
+  }
+  if (c.ticketNotes) {
+    tHtml += `<div class="tnotes" style="margin-top:${(c.pdfPath||c.ticketUrl)?'12px':'0'}">${esc(c.ticketNotes)}</div>`;
+  }
+
+  body.innerHTML = `
+    <div class="dhero">
+      <div class="dname">${esc(c.name)}</div>
+      <div class="ddate">${nlDate(c.date)}${c.time?' · '+esc(c.time):''}</div>
+      <div class="dloc">${esc([c.venue,c.city].filter(Boolean).join(' · '))}</div>
+    </div>
+    ${tHtml?`<div class="dsec"><div class="dlbl">Ticket</div>${tHtml}</div>`:''}
+    ${comps.length?`<div class="dsec"><div class="dlbl">Wie gaat mee</div>
+      <div class="complist">${comps.map(p=>`<div class="comp"><div class="avatar">${inits(p)}</div><div>${esc(p)}</div></div>`).join('')}</div>
+    </div>`:''}
+    ${c.notes?`<div class="dsec"><div class="dlbl">Notities</div><div class="ntext">${esc(c.notes)}</div></div>`:''}
+    <div class="dactions">
+      <button class="abtn edit" id="det-edit">Bewerken</button>
+      <button class="abtn del" id="det-del">Verwijderen</button>
+    </div>`;
+
+  document.getElementById('det-edit').onclick = () => openForm(curId);
+  document.getElementById('det-del').onclick = async () => {
+    if (!confirm('Concert verwijderen?')) return;
+    const c2 = concerts.find(x => x.id === curId);
+    if (c2?.pdfPath) await deletePdf(c2.pdfPath);
+    concerts = concerts.filter(x => x.id !== curId);
+    await saveConcerts();
+    renderList();
+    show('agenda');
+  };
+  show('detail');
+}
+
+// ─── FORM ────────────────────────────────────────────────────────────────────
+function openForm(id) {
+  const c = id ? concerts.find(x => x.id === id) : null;
+  pendingPdf = null;
+  document.getElementById('ftitle').textContent = c ? 'Bewerken' : 'Nieuw concert';
+  document.getElementById('fid').value = c?.id || '';
+  document.getElementById('fname').value = c?.name || '';
+  document.getElementById('fdate').value = c?.date || '';
+  document.getElementById('ftime').value = c?.time || '';
+  document.getElementById('fvenue').value = c?.venue || '';
+  document.getElementById('fcity').value = c?.city || '';
+  document.getElementById('fpdf-path').value = c?.pdfPath || '';
+  document.getElementById('furl').value = c?.ticketUrl || '';
+  document.getElementById('fnotes-ticket').value = c?.ticketNotes || '';
+  document.getElementById('fcomp').value = (c?.companions||[]).join(', ');
+  document.getElementById('fnotes').value = c?.notes || '';
+
+  const drop = document.getElementById('pdfdrop');
+  const txt  = document.getElementById('pdfdrop-txt');
+  const clr  = document.getElementById('pdf-clear');
+  if (c?.pdfPath) {
+    drop.classList.add('has'); drop.classList.remove('drag');
+    txt.textContent = '📄 ' + c.pdfPath.split('/').pop();
+    clr.style.display = '';
+  } else {
+    drop.classList.remove('has','drag');
+    txt.textContent = 'Tik om een ticket-PDF te kiezen';
+    clr.style.display = 'none';
+  }
+  document.getElementById('fpdf').value = '';
+  validateForm();
+  show('form');
+}
+
+function validateForm() {
+  const ok = document.getElementById('fname').value.trim() && document.getElementById('fdate').value;
+  document.getElementById('savebtn').disabled = !ok;
+}
+document.getElementById('fname').addEventListener('input', validateForm);
+document.getElementById('fdate').addEventListener('input', validateForm);
+
+// PDF drop area
+const pdfDrop = document.getElementById('pdfdrop');
+const pdfInput = document.getElementById('fpdf');
+const pdfTxt = document.getElementById('pdfdrop-txt');
+const pdfClr = document.getElementById('pdf-clear');
+
+pdfDrop.addEventListener('click', () => pdfInput.click());
+pdfInput.addEventListener('change', () => {
+  const f = pdfInput.files[0];
+  if (!f) return;
+  pendingPdf = f;
+  pdfDrop.classList.add('has'); pdfDrop.classList.remove('drag');
+  pdfTxt.textContent = '📄 ' + f.name;
+  pdfClr.style.display = '';
+  document.getElementById('fpdf-path').value = '';
+});
+pdfDrop.addEventListener('dragover', e => { e.preventDefault(); pdfDrop.classList.add('drag'); });
+pdfDrop.addEventListener('dragleave', () => pdfDrop.classList.remove('drag'));
+pdfDrop.addEventListener('drop', e => {
+  e.preventDefault(); pdfDrop.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type === 'application/pdf') {
+    pendingPdf = f;
+    pdfDrop.classList.add('has');
+    pdfTxt.textContent = '📄 ' + f.name;
+    pdfClr.style.display = '';
+    document.getElementById('fpdf-path').value = '';
+  }
+});
+pdfClr.addEventListener('click', e => {
+  e.stopPropagation();
+  pendingPdf = null;
+  document.getElementById('fpdf-path').value = '';
+  document.getElementById('fpdf').value = '';
+  pdfDrop.classList.remove('has','drag');
+  pdfTxt.textContent = 'Tik om een ticket-PDF te kiezen';
+  pdfClr.style.display = 'none';
+});
+
+// Save
+document.getElementById('savebtn').addEventListener('click', async () => {
+  const btn = document.getElementById('savebtn');
+  btn.disabled = true;
+  btn.textContent = 'Opslaan…';
+
+  const id = document.getElementById('fid').value || crypto.randomUUID();
+  let pdfPath = document.getElementById('fpdf-path').value || '';
+
+  try {
+    if (pendingPdf) {
+      btn.textContent = 'PDF uploaden…';
+      const oldC = concerts.find(x => x.id === id);
+      if (oldC?.pdfPath) await deletePdf(oldC.pdfPath);
+      pdfPath = await uploadPdf(pendingPdf, id);
+    }
+
+    const entry = {
+      id,
+      name: document.getElementById('fname').value.trim(),
+      date: document.getElementById('fdate').value,
+      time: document.getElementById('ftime').value,
+      venue: document.getElementById('fvenue').value.trim(),
+      city: document.getElementById('fcity').value.trim(),
+      pdfPath,
+      ticketUrl: document.getElementById('furl').value.trim(),
+      ticketNotes: document.getElementById('fnotes-ticket').value.trim(),
+      companions: document.getElementById('fcomp').value.split(',').map(s => s.trim()).filter(Boolean),
+      notes: document.getElementById('fnotes').value.trim(),
+    };
+
+    const existing = concerts.findIndex(c => c.id === id);
+    if (existing >= 0) concerts[existing] = entry;
+    else concerts.push(entry);
+
+    await saveConcerts();
+    renderList();
+    pendingPdf = null;
+    showDetail(id);
+    toast('Opgeslagen ✓');
+  } catch (e) {
+    toast('Fout: ' + (e.message || 'onbekend'));
+    btn.disabled = false;
+    btn.textContent = 'Opslaan';
+  }
+});
+
+// ─── FILTER ──────────────────────────────────────────────────────────────────
+document.querySelectorAll('.fbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    curFilter = btn.dataset.f;
+    renderList();
+  });
+});
+
+// ─── SETUP FORM ──────────────────────────────────────────────────────────────
+const cfgUrl = document.getElementById('cfg-url');
+const cfgKey = document.getElementById('cfg-key');
+const connBtn = document.getElementById('connect-btn');
+function validateCfg() {
+  connBtn.disabled = !(cfgUrl.value.trim().startsWith('https://') && cfgKey.value.trim().length > 20);
+}
+cfgUrl.addEventListener('input', validateCfg);
+cfgKey.addEventListener('input', validateCfg);
+
+connBtn.addEventListener('click', async () => {
+  connBtn.disabled = true;
+  connBtn.textContent = 'Verbinden…';
+  const url = cfgUrl.value.trim();
+  const key = cfgKey.value.trim();
+  try {
+    const client = supabase.createClient(url, key);
+    const { error } = await client.from('store').select('key').limit(1);
+    if (error) throw new Error('Tabel "store" niet gevonden. Voer de SQL uit in stap 3.');
+    localStorage.setItem(CFG_URL, url);
+    localStorage.setItem(CFG_KEY, key);
+    sb = client;
+    show('agenda');
+    await loadConcerts();
+  } catch (e) {
+    toast(e.message || 'Verbinding mislukt');
+    connBtn.disabled = false;
+    connBtn.textContent = 'Verbinden';
+  }
+});
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+document.getElementById('back-d').onclick = () => show('agenda');
+document.getElementById('back-f').onclick = () => { curId ? showDetail(curId) : show('agenda'); };
+document.getElementById('fab').onclick = () => { curId = null; openForm(null); };
+document.getElementById('settings-btn').onclick = () => {
+  if (confirm('Supabase-verbinding wissen en opnieuw instellen?')) {
+    localStorage.removeItem(CFG_URL);
+    localStorage.removeItem(CFG_KEY);
+    sb = null; concerts = [];
+    show('setup');
+  }
+};
+
+init();
+</script>
+</body>
+</html>
