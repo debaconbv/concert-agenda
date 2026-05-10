@@ -158,6 +158,32 @@ input[type=date],input[type=time]{color-scheme:dark}
 .spinner{width:28px;height:28px;border:2.5px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* Toggle switch */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--sf);border-radius:10px;padding:13px 14px;border:.5px solid var(--bd)}
+.toggle-label{font-size:15px;color:var(--tx)}
+.toggle-sub{font-size:12px;color:var(--mu);margin-top:2px}
+input[type=checkbox].toggle{appearance:none;-webkit-appearance:none;width:44px;height:26px;border-radius:13px;background:var(--sf3);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+input[type=checkbox].toggle::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
+input[type=checkbox].toggle:checked{background:var(--gr)}
+input[type=checkbox].toggle:checked::after{transform:translateX(18px)}
+.collapsible{overflow:hidden;transition:max-height .25s ease;max-height:0}
+.collapsible.open{max-height:200px}
+/* Image upload */
+.imgdrop{border:1.5px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;color:var(--mu);font-size:14px;transition:border-color .2s,background .2s;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;align-items:center;gap:6px}
+.imgdrop:active,.imgdrop.drag{border-color:var(--ac);background:var(--ac2);color:var(--ac)}
+.imgdrop.has{border-color:var(--ac);background:var(--ac2);color:var(--ac);padding:0;overflow:hidden}
+.imgdrop.has img{width:100%;max-height:180px;object-fit:cover;border-radius:8px;display:block}
+.imgdrop svg{width:28px;height:28px;stroke-width:1.5;fill:none;stroke:var(--mu);flex-shrink:0}
+.imgdrop.drag svg{stroke:var(--ac)}
+.img-clear{font-size:12px;color:var(--re);cursor:pointer;text-decoration:underline;margin-top:4px;display:block}
+#fimg{display:none}
+/* Image in detail */
+.detail-img{width:100%;border-radius:10px;display:block;max-height:360px;object-fit:cover}
+/* Multi-day date block */
+.dblock.multi .dday{font-size:16px;line-height:1.3;font-weight:700}
+/* Website button */
+.tbtn.web{background:var(--sf2);color:var(--tx)}
+.tbtn.web svg{stroke:var(--mu);width:22px;height:22px;stroke-width:2;fill:none;flex-shrink:0}
 /* Toast */
 .toast{position:fixed;bottom:calc(24px + var(--sb));left:50%;transform:translateX(-50%) translateY(16px);background:var(--sf2);color:var(--tx);padding:10px 18px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:9999;border:.5px solid var(--bd)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -273,13 +299,24 @@ alter table store disable row level security;</div>
       <input type="hidden" id="fid">
       <input type="hidden" id="fpdf-id">
       <input type="hidden" id="fpdf-path">
+      <input type="hidden" id="fimg-path">
       <div class="fgrp">
         <label class="flbl">Artiest / festival *</label>
         <input class="finp" id="fname" placeholder="Radiohead, Rock Werchter…" autocomplete="off">
       </div>
+
+      <!-- Multi-day toggle -->
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Meerdere dagen</div>
+          <div class="toggle-sub">Voor festivals of meerdaagse events</div>
+        </div>
+        <input type="checkbox" class="toggle" id="fmulti">
+      </div>
+
       <div class="frow">
         <div class="fgrp">
-          <label class="flbl">Datum *</label>
+          <label class="flbl" id="lbl-date">Datum *</label>
           <input class="finp" type="date" id="fdate">
         </div>
         <div class="fgrp">
@@ -287,6 +324,13 @@ alter table store disable row level security;</div>
           <input class="finp" type="time" id="ftime">
         </div>
       </div>
+      <div class="collapsible" id="dateend-wrap">
+        <div class="fgrp" style="padding-bottom:2px">
+          <label class="flbl">Einddatum</label>
+          <input class="finp" type="date" id="fdateend">
+        </div>
+      </div>
+
       <div class="frow">
         <div class="fgrp">
           <label class="flbl">Locatie</label>
@@ -296,6 +340,21 @@ alter table store disable row level security;</div>
           <label class="flbl">Stad</label>
           <input class="finp" id="fcity" placeholder="Brussel…">
         </div>
+      </div>
+
+      <div class="fgrp">
+        <label class="flbl">Website</label>
+        <input class="finp" type="url" id="fwebsite" placeholder="https://rockwerchter.be…">
+      </div>
+
+      <div class="fgrp">
+        <label class="flbl">Afbeelding (line-up, poster…)</label>
+        <div class="imgdrop" id="imgdrop" role="button" tabindex="0">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span id="imgdrop-txt">Tik om een afbeelding te kiezen</span>
+          <span class="img-clear" id="img-clear" style="display:none">Verwijderen</span>
+        </div>
+        <input type="file" id="fimg" accept="image/*">
       </div>
 
       <div class="fgrp">
@@ -377,7 +436,8 @@ let sb = null;
 let concerts = [];
 let curFilter = 'upcoming';
 let curId = null;
-let pendingPdf = null;  // { file, name }
+let pendingPdf = null;
+let pendingImg = null;
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
@@ -421,8 +481,16 @@ async function saveConcerts() {
 
 async function uploadPdf(file, concertId) {
   const ext = file.name.split('.').pop() || 'pdf';
-  const path = concertId + '/' + Date.now() + '.' + ext;
+  const path = concertId + '/ticket_' + Date.now() + '.' + ext;
   const { data, error } = await sb.storage.from(BUCKET).upload(path, file, { contentType: 'application/pdf', upsert: true });
+  if (error) throw error;
+  return path;
+}
+
+async function uploadImg(file, concertId) {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = concertId + '/img_' + Date.now() + '.' + ext;
+  const { data, error } = await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || 'image/jpeg', upsert: true });
   if (error) throw error;
   return path;
 }
@@ -463,6 +531,15 @@ function nlDate(d) {
   if (!d) return '';
   return new Date(d + 'T12:00:00').toLocaleDateString('nl-BE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 }
+function nlDateRange(d1, d2) {
+  if (!d2) return nlDate(d1);
+  const dt1 = new Date(d1 + 'T12:00:00'), dt2 = new Date(d2 + 'T12:00:00');
+  const sameMonth = dt1.getMonth() === dt2.getMonth() && dt1.getFullYear() === dt2.getFullYear();
+  if (sameMonth) {
+    return dt1.toLocaleDateString('nl-BE',{weekday:'long',day:'numeric'}) + ' – ' + dt2.toLocaleDateString('nl-BE',{day:'numeric',month:'long',year:'numeric'});
+  }
+  return dt1.toLocaleDateString('nl-BE',{day:'numeric',month:'long'}) + ' – ' + dt2.toLocaleDateString('nl-BE',{day:'numeric',month:'long',year:'numeric'});
+}
 function sMon(d) {
   if (!d) return '';
   return new Date(d + 'T12:00:00').toLocaleDateString('nl-BE', { month:'short' }).replace('.','');
@@ -479,8 +556,9 @@ function renderList() {
   const today = TODAY();
   const list = document.getElementById('clist');
   let items = [...concerts].sort((a, b) => a.date.localeCompare(b.date));
-  if (curFilter === 'upcoming') items = items.filter(c => c.date >= today);
-  else if (curFilter === 'past')   items = items.filter(c => c.date < today).reverse();
+  const endDate = c => c.dateEnd || c.date;
+  if (curFilter === 'upcoming') items = items.filter(c => endDate(c) >= today);
+  else if (curFilter === 'past') items = items.filter(c => endDate(c) < today).reverse();
 
   if (!items.length) {
     const m = { upcoming:'Geen komende concerten gepland', past:'Geen voorbije concerten', all:'Nog geen concerten toegevoegd' };
@@ -489,24 +567,41 @@ function renderList() {
   }
 
   list.innerHTML = items.map(c => {
-    const past = c.date < today;
+    const past = endDate(c) < today;
     const dt = new Date(c.date + 'T12:00:00');
     const days = daysTo(c.date);
     const soon = !past && days >= 0 && days <= 7;
+    const multi = !!c.dateEnd;
     const hasT = c.pdfPath || c.ticketUrl || c.ticketNotes;
     const comps = c.companions || [];
     const hotLabel = days === 0 ? 'Vandaag 🔥' : days === 1 ? 'Morgen!' : `Nog ${days} dagen`;
-    const chipsArr = [
-      hasT ? `<span class="chip t">🎟 Ticket</span>` : '',
-      comps.length ? `<span class="chip">👥 ${esc(comps.slice(0,3).join(', '))}${comps.length>3?` +${comps.length-3}`:''}</span>` : '',
-      soon ? `<span class="chip hot">${hotLabel}</span>` : ''
-    ].filter(Boolean);
-    return `<div class="card${past?' past':''}" data-id="${esc(c.id)}">
-      <div class="dblock${soon?' soon':''}">
+
+    let dateBlockHtml;
+    if (multi) {
+      const dt2 = new Date(c.dateEnd + 'T12:00:00');
+      const sameMonth = dt.getMonth() === dt2.getMonth();
+      dateBlockHtml = `<div class="dblock multi${soon?' soon':''}">
+        <div class="dmon">${sMon(c.date)}${sameMonth?'':' – '+sMon(c.dateEnd)}</div>
+        <div class="dday">${dt.getDate()}–${dt2.getDate()}</div>
+        <div class="dyr">${dt.getFullYear()}</div>
+      </div>`;
+    } else {
+      dateBlockHtml = `<div class="dblock${soon?' soon':''}">
         <div class="dmon">${sMon(c.date)}</div>
         <div class="dday">${dt.getDate()}</div>
         <div class="dyr">${dt.getFullYear()}</div>
-      </div>
+      </div>`;
+    }
+
+    const chipsArr = [
+      hasT ? `<span class="chip t">🎟 Ticket</span>` : '',
+      c.imagePath ? `<span class="chip">🖼 Foto</span>` : '',
+      comps.length ? `<span class="chip">👥 ${esc(comps.slice(0,3).join(', '))}${comps.length>3?` +${comps.length-3}`:''}</span>` : '',
+      soon ? `<span class="chip hot">${hotLabel}</span>` : ''
+    ].filter(Boolean);
+
+    return `<div class="card${past?' past':''}" data-id="${esc(c.id)}">
+      ${dateBlockHtml}
       <div class="cinfo">
         <div class="cname">${esc(c.name)}</div>
         <div class="cmeta">${esc([c.venue,c.city].filter(Boolean).join(' · '))}${c.time?' · '+esc(c.time):''}</div>
@@ -529,10 +624,28 @@ function showDetail(id) {
   const body = document.getElementById('dbody');
   const comps = c.companions || [];
 
+  // Date display
+  const dateStr = c.dateEnd ? nlDateRange(c.date, c.dateEnd) : nlDate(c.date);
+
+  // Image section
+  const imgHtml = c.imagePath ? `<div class="dsec">
+    <div class="dlbl">Afbeelding</div>
+    <img class="detail-img" src="${esc(getPdfUrl(c.imagePath))}" alt="line-up">
+  </div>` : '';
+
+  // Website
+  const webHtml = c.websiteUrl ? `<div class="dsec">
+    <div class="dlbl">Website</div>
+    <a class="tbtn web" href="${esc(c.websiteUrl)}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      ${esc(c.websiteUrl.replace(/^https?:\/\//,'').replace(/\/$/,''))}
+    </a>
+  </div>` : '';
+
+  // Ticket
   let tHtml = '';
   if (c.pdfPath) {
-    const url = getPdfUrl(c.pdfPath);
-    tHtml += `<a class="tbtn pdf" href="${esc(url)}" target="_blank" rel="noopener">
+    tHtml += `<a class="tbtn pdf" href="${esc(getPdfUrl(c.pdfPath))}" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       Ticket PDF openen
     </a>`;
@@ -550,9 +663,11 @@ function showDetail(id) {
   body.innerHTML = `
     <div class="dhero">
       <div class="dname">${esc(c.name)}</div>
-      <div class="ddate">${nlDate(c.date)}${c.time?' · '+esc(c.time):''}</div>
+      <div class="ddate">${dateStr}${c.time?' · '+esc(c.time):''}</div>
       <div class="dloc">${esc([c.venue,c.city].filter(Boolean).join(' · '))}</div>
     </div>
+    ${imgHtml}
+    ${webHtml}
     ${tHtml?`<div class="dsec"><div class="dlbl">Ticket</div>${tHtml}</div>`:''}
     ${comps.length?`<div class="dsec"><div class="dlbl">Wie gaat mee</div>
       <div class="complist">${comps.map(p=>`<div class="comp"><div class="avatar">${inits(p)}</div><div>${esc(p)}</div></div>`).join('')}</div>
@@ -568,6 +683,7 @@ function showDetail(id) {
     if (!confirm('Concert verwijderen?')) return;
     const c2 = concerts.find(x => x.id === curId);
     if (c2?.pdfPath) await deletePdf(c2.pdfPath);
+    if (c2?.imagePath) await deletePdf(c2.imagePath);
     concerts = concerts.filter(x => x.id !== curId);
     await saveConcerts();
     renderList();
@@ -577,37 +693,78 @@ function showDetail(id) {
 }
 
 // ─── FORM ────────────────────────────────────────────────────────────────────
+const multiToggle = document.getElementById('fmulti');
+const dateEndWrap = document.getElementById('dateend-wrap');
+multiToggle.addEventListener('change', () => {
+  dateEndWrap.classList.toggle('open', multiToggle.checked);
+  document.getElementById('lbl-date').textContent = multiToggle.checked ? 'Startdatum *' : 'Datum *';
+});
+
 function openForm(id) {
   const c = id ? concerts.find(x => x.id === id) : null;
-  pendingPdf = null;
+  pendingPdf = null; pendingImg = null;
   document.getElementById('ftitle').textContent = c ? 'Bewerken' : 'Nieuw concert';
   document.getElementById('fid').value = c?.id || '';
   document.getElementById('fname').value = c?.name || '';
   document.getElementById('fdate').value = c?.date || '';
+  document.getElementById('fdateend').value = c?.dateEnd || '';
   document.getElementById('ftime').value = c?.time || '';
   document.getElementById('fvenue').value = c?.venue || '';
   document.getElementById('fcity').value = c?.city || '';
+  document.getElementById('fwebsite').value = c?.websiteUrl || '';
   document.getElementById('fpdf-path').value = c?.pdfPath || '';
+  document.getElementById('fimg-path').value = c?.imagePath || '';
   document.getElementById('furl').value = c?.ticketUrl || '';
   document.getElementById('fnotes-ticket').value = c?.ticketNotes || '';
   document.getElementById('fcomp').value = (c?.companions||[]).join(', ');
   document.getElementById('fnotes').value = c?.notes || '';
 
+  const isMulti = !!c?.dateEnd;
+  multiToggle.checked = isMulti;
+  dateEndWrap.classList.toggle('open', isMulti);
+  document.getElementById('lbl-date').textContent = isMulti ? 'Startdatum *' : 'Datum *';
+
+  // PDF drop
   const drop = document.getElementById('pdfdrop');
   const txt  = document.getElementById('pdfdrop-txt');
   const clr  = document.getElementById('pdf-clear');
   if (c?.pdfPath) {
-    drop.classList.add('has'); drop.classList.remove('drag');
-    txt.textContent = '📄 ' + c.pdfPath.split('/').pop();
-    clr.style.display = '';
+    drop.classList.add('has'); txt.textContent = '📄 ticket.pdf'; clr.style.display = '';
   } else {
-    drop.classList.remove('has','drag');
-    txt.textContent = 'Tik om een ticket-PDF te kiezen';
-    clr.style.display = 'none';
+    drop.classList.remove('has','drag'); txt.textContent = 'Tik om een ticket-PDF te kiezen'; clr.style.display = 'none';
   }
   document.getElementById('fpdf').value = '';
+
+  // Image drop
+  const iDrop = document.getElementById('imgdrop');
+  const iTxt  = document.getElementById('imgdrop-txt');
+  const iClr  = document.getElementById('img-clear');
+  if (c?.imagePath) {
+    iDrop.classList.add('has');
+    iDrop.innerHTML = `<img src="${esc(getPdfUrl(c.imagePath))}" alt="preview"><span class="img-clear" id="img-clear">Verwijderen</span>`;
+    document.getElementById('img-clear').addEventListener('click', e => { e.stopPropagation(); clearImg(); });
+  } else {
+    resetImgDrop();
+  }
+  document.getElementById('fimg').value = '';
   validateForm();
   show('form');
+}
+
+function resetImgDrop() {
+  const iDrop = document.getElementById('imgdrop');
+  iDrop.classList.remove('has','drag');
+  iDrop.innerHTML = `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    <span id="imgdrop-txt">Tik om een afbeelding te kiezen</span>
+    <span class="img-clear" id="img-clear" style="display:none">Verwijderen</span>`;
+  document.getElementById('img-clear').addEventListener('click', e => { e.stopPropagation(); clearImg(); });
+}
+
+function clearImg() {
+  pendingImg = null;
+  document.getElementById('fimg-path').value = '';
+  document.getElementById('fimg').value = '';
+  resetImgDrop();
 }
 
 function validateForm() {
@@ -656,14 +813,43 @@ pdfClr.addEventListener('click', e => {
   pdfClr.style.display = 'none';
 });
 
+// Image drop area
+const imgInput = document.getElementById('fimg');
+document.getElementById('imgdrop').addEventListener('click', () => imgInput.click());
+imgInput.addEventListener('change', () => {
+  const f = imgInput.files[0];
+  if (!f) return;
+  pendingImg = f;
+  const iDrop = document.getElementById('imgdrop');
+  iDrop.classList.add('has');
+  const url = URL.createObjectURL(f);
+  iDrop.innerHTML = `<img src="${url}" alt="preview"><span class="img-clear" id="img-clear">Verwijderen</span>`;
+  document.getElementById('img-clear').addEventListener('click', e => { e.stopPropagation(); clearImg(); });
+  document.getElementById('fimg-path').value = '';
+});
+document.getElementById('imgdrop').addEventListener('dragover', e => { e.preventDefault(); document.getElementById('imgdrop').classList.add('drag'); });
+document.getElementById('imgdrop').addEventListener('dragleave', () => document.getElementById('imgdrop').classList.remove('drag'));
+document.getElementById('imgdrop').addEventListener('drop', e => {
+  e.preventDefault(); document.getElementById('imgdrop').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) {
+    pendingImg = f;
+    const iDrop = document.getElementById('imgdrop');
+    iDrop.classList.add('has');
+    iDrop.innerHTML = `<img src="${URL.createObjectURL(f)}" alt="preview"><span class="img-clear" id="img-clear">Verwijderen</span>`;
+    document.getElementById('img-clear').addEventListener('click', ev => { ev.stopPropagation(); clearImg(); });
+    document.getElementById('fimg-path').value = '';
+  }
+});
+
 // Save
 document.getElementById('savebtn').addEventListener('click', async () => {
   const btn = document.getElementById('savebtn');
-  btn.disabled = true;
-  btn.textContent = 'Opslaan…';
+  btn.disabled = true; btn.textContent = 'Opslaan…';
 
   const id = document.getElementById('fid').value || crypto.randomUUID();
   let pdfPath = document.getElementById('fpdf-path').value || '';
+  let imagePath = document.getElementById('fimg-path').value || '';
 
   try {
     if (pendingPdf) {
@@ -672,14 +858,24 @@ document.getElementById('savebtn').addEventListener('click', async () => {
       if (oldC?.pdfPath) await deletePdf(oldC.pdfPath);
       pdfPath = await uploadPdf(pendingPdf, id);
     }
+    if (pendingImg) {
+      btn.textContent = 'Afbeelding uploaden…';
+      const oldC = concerts.find(x => x.id === id);
+      if (oldC?.imagePath) await deletePdf(oldC.imagePath);
+      imagePath = await uploadImg(pendingImg, id);
+    }
 
+    const isMulti = document.getElementById('fmulti').checked;
     const entry = {
       id,
       name: document.getElementById('fname').value.trim(),
       date: document.getElementById('fdate').value,
+      dateEnd: isMulti ? (document.getElementById('fdateend').value || '') : '',
       time: document.getElementById('ftime').value,
       venue: document.getElementById('fvenue').value.trim(),
       city: document.getElementById('fcity').value.trim(),
+      websiteUrl: document.getElementById('fwebsite').value.trim(),
+      imagePath,
       pdfPath,
       ticketUrl: document.getElementById('furl').value.trim(),
       ticketNotes: document.getElementById('fnotes-ticket').value.trim(),
@@ -693,13 +889,12 @@ document.getElementById('savebtn').addEventListener('click', async () => {
 
     await saveConcerts();
     renderList();
-    pendingPdf = null;
+    pendingPdf = null; pendingImg = null;
     showDetail(id);
     toast('Opgeslagen ✓');
   } catch (e) {
     toast('Fout: ' + (e.message || 'onbekend'));
-    btn.disabled = false;
-    btn.textContent = 'Opslaan';
+    btn.disabled = false; btn.textContent = 'Opslaan';
   }
 });
 
