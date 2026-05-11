@@ -213,6 +213,11 @@ input[type=checkbox].toggle:checked::after{transform:translateX(18px)}
 .tknotes{background:var(--sf2);border-radius:8px;padding:10px 12px;font-family:'SF Mono',Menlo,monospace;font-size:13px;word-break:break-all;letter-spacing:.4px;line-height:1.6;color:var(--tx)}
 .tkemp{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--mu);font-size:15px;padding-bottom:80px}
 .tkemp-ico{font-size:48px;line-height:1;opacity:.5}
+.tkstatus{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+.tkstatus.ok{background:var(--gr2);color:var(--gr)}
+.tkstatus.warn{background:var(--ac2);color:var(--ac)}
+.tkstatus.sell{background:var(--re2);color:var(--re)}
+.tkbuyer{font-size:13px;color:var(--mu);margin-top:4px}
 </style>
 </head>
 <body>
@@ -400,6 +405,16 @@ alter table store disable row level security;</div>
       <div class="fgrp">
         <label class="flbl">Ticket details (barcode, zitplaats…)</label>
         <textarea class="ftxt" id="fnotes-ticket" placeholder="Rij 5 · Stoel 12&#10;Barcode: ABC1234567…"></textarea>
+      </div>
+      <div class="frow">
+        <div class="fgrp">
+          <label class="flbl">Aantal tickets</label>
+          <input class="finp" type="number" id="ftickcount" min="1" max="99" placeholder="2">
+        </div>
+        <div class="fgrp">
+          <label class="flbl">Gekocht door</label>
+          <input class="finp" id="fboughtby" placeholder="Dennis…">
+        </div>
       </div>
       <div class="fgrp">
         <label class="flbl">Wie gaat mee? (komma-gescheiden)</label>
@@ -708,6 +723,21 @@ function showDetail(id) {
   if (c.ticketNotes) {
     tHtml += `<div class="tnotes" style="margin-top:${(c.pdfPath||c.ticketUrl)?'12px':'0'}">${esc(c.ticketNotes)}</div>`;
   }
+  if (c.ticketCount || c.boughtBy) {
+    const people = (c.companions||[]).length + 1;
+    let statusHtml = '';
+    if (c.ticketCount) {
+      const diff = c.ticketCount - people;
+      if (diff > 0) statusHtml = `<span class="tkstatus sell">🎟 ${diff} ticket${diff>1?'s':''} over — Ticketswap?</span>`;
+      else if (diff < 0) statusHtml = `<span class="tkstatus warn">⚠️ ${Math.abs(diff)} ticket${Math.abs(diff)>1?'s':''} te weinig</span>`;
+      else statusHtml = `<span class="tkstatus ok">✓ Volledig bezet</span>`;
+    }
+    tHtml += `<div style="margin-top:${(c.pdfPath||c.ticketUrl||c.ticketNotes)?'12px':'0'};display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      ${c.ticketCount ? `<span style="font-size:14px;color:var(--tx)">${c.ticketCount} ticket${c.ticketCount>1?'s':''}</span>` : ''}
+      ${c.boughtBy ? `<span class="tkbuyer">gekocht door <strong>${esc(c.boughtBy)}</strong></span>` : ''}
+      ${statusHtml}
+    </div>`;
+  }
 
   body.innerHTML = `
     <div class="dhero">
@@ -765,6 +795,8 @@ function openForm(id) {
   document.getElementById('fimg-path').value = c?.imagePath || '';
   document.getElementById('furl').value = c?.ticketUrl || '';
   document.getElementById('fnotes-ticket').value = c?.ticketNotes || '';
+  document.getElementById('ftickcount').value = c?.ticketCount || '';
+  document.getElementById('fboughtby').value = c?.boughtBy || '';
   document.getElementById('fcomp').value = (c?.companions||[]).join(', ');
   document.getElementById('fnotes').value = c?.notes || '';
 
@@ -821,7 +853,18 @@ function validateForm() {
   document.getElementById('savebtn').disabled = !ok;
 }
 document.getElementById('fname').addEventListener('input', validateForm);
-document.getElementById('fdate').addEventListener('input', validateForm);
+document.getElementById('fdate').addEventListener('input', () => {
+  validateForm();
+  const startVal = document.getElementById('fdate').value;
+  const endInp = document.getElementById('fdateend');
+  if (startVal) {
+    const next = new Date(startVal + 'T12:00:00');
+    next.setDate(next.getDate() + 1);
+    const minEnd = next.toISOString().slice(0, 10);
+    endInp.min = minEnd;
+    if (endInp.value && endInp.value <= startVal) endInp.value = minEnd;
+  }
+});
 
 // PDF drop area
 const pdfDrop = document.getElementById('pdfdrop');
@@ -928,6 +971,8 @@ document.getElementById('savebtn').addEventListener('click', async () => {
       pdfPath,
       ticketUrl: document.getElementById('furl').value.trim(),
       ticketNotes: document.getElementById('fnotes-ticket').value.trim(),
+      ticketCount: parseInt(document.getElementById('ftickcount').value) || 0,
+      boughtBy: document.getElementById('fboughtby').value.trim(),
       companions: document.getElementById('fcomp').value.split(',').map(s => s.trim()).filter(Boolean),
       notes: document.getElementById('fnotes').value.trim(),
     };
@@ -980,12 +1025,27 @@ function renderTickets() {
     }
     const notes = c.ticketNotes ? `<div class="tknotes">${esc(c.ticketNotes)}</div>` : '';
 
+    const people = (c.companions||[]).length + 1;
+    let statusBadge = '';
+    if (c.ticketCount) {
+      const diff = c.ticketCount - people;
+      if (diff > 0) statusBadge = `<span class="tkstatus sell">🎟 ${diff} over</span>`;
+      else if (diff < 0) statusBadge = `<span class="tkstatus warn">⚠️ ${Math.abs(diff)} te weinig</span>`;
+      else statusBadge = `<span class="tkstatus ok">✓ Volledig bezet</span>`;
+    }
+    const metaLine = [
+      c.ticketCount ? `${c.ticketCount} ticket${c.ticketCount>1?'s':''}` : '',
+      c.boughtBy ? `gekocht door ${c.boughtBy}` : ''
+    ].filter(Boolean).join(' · ');
+
     return `<div class="tkcard${past ? ' past' : ''}">
       <div class="tkcard-head">
         <div class="tkcard-info">
           <div class="tkcard-name">${esc(c.name)}</div>
           <div class="tkcard-date">${dateStr}${c.time ? ' · ' + esc(c.time) : ''}</div>
           ${loc ? `<div class="tkcard-loc">${esc(loc)}</div>` : ''}
+          ${metaLine ? `<div class="tkbuyer" style="margin-top:4px">${esc(metaLine)}</div>` : ''}
+          ${statusBadge ? `<div style="margin-top:6px">${statusBadge}</div>` : ''}
         </div>
       </div>
       <div class="tkcard-body">${btns}${notes}</div>
