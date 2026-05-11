@@ -91,6 +91,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .chip{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--sf2);color:var(--mu);font-weight:500}
 .chip.t{background:var(--gr2);color:var(--gr)}
 .chip.hot{background:var(--ac2);color:var(--ac)}
+.chip.buy{background:var(--re2);color:var(--re)}
 .carr{color:var(--mu2);flex-shrink:0;align-self:center}
 
 /* FAB */
@@ -172,13 +173,13 @@ input[type=checkbox].toggle:checked::after{transform:translateX(18px)}
 .imgdrop{border:1.5px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;color:var(--mu);font-size:14px;transition:border-color .2s,background .2s;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;align-items:center;gap:6px}
 .imgdrop:active,.imgdrop.drag{border-color:var(--ac);background:var(--ac2);color:var(--ac)}
 .imgdrop.has{border-color:var(--ac);background:var(--ac2);color:var(--ac);padding:0;overflow:hidden}
-.imgdrop.has img{width:100%;max-height:180px;object-fit:cover;border-radius:8px;display:block}
+.imgdrop.has img{width:100%;max-height:220px;object-fit:contain;border-radius:8px;display:block;background:var(--sf3)}
 .imgdrop svg{width:28px;height:28px;stroke-width:1.5;fill:none;stroke:var(--mu);flex-shrink:0}
 .imgdrop.drag svg{stroke:var(--ac)}
 .img-clear{font-size:12px;color:var(--re);cursor:pointer;text-decoration:underline;margin-top:4px;display:block}
 #fimg{display:none}
 /* Image in detail */
-.detail-img{width:100%;border-radius:10px;display:block;max-height:360px;object-fit:cover}
+.detail-img{width:100%;border-radius:10px;display:block;max-height:480px;object-fit:contain;background:var(--sf3)}
 /* Multi-day date block */
 .dblock.multi .dday{font-size:16px;line-height:1.3;font-weight:700}
 /* Website button */
@@ -386,6 +387,15 @@ alter table store disable row level security;</div>
           <span class="img-clear" id="img-clear" style="display:none">Verwijderen</span>
         </div>
         <input type="file" id="fimg" accept="image/*">
+      </div>
+
+      <!-- Ticket status toggle -->
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Tickets nog te kopen</div>
+          <div class="toggle-sub">Herinneringsmarkering — officieel kanaal of Ticketswap</div>
+        </div>
+        <input type="checkbox" class="toggle" id="ftickbuy">
       </div>
 
       <div class="fgrp">
@@ -658,7 +668,7 @@ function renderList() {
     }
 
     const chipsArr = [
-      hasT ? `<span class="chip t">🎟 Ticket</span>` : '',
+      c.ticketsToBuy ? `<span class="chip buy">🎟 Nog te kopen</span>` : (hasT ? `<span class="chip t">🎟 Ticket</span>` : ''),
       c.imagePath ? `<span class="chip">🖼 Foto</span>` : '',
       comps.length ? `<span class="chip">👥 ${esc(comps.slice(0,3).join(', '))}${comps.length>3?` +${comps.length-3}`:''}</span>` : '',
       soon ? `<span class="chip hot">${hotLabel}</span>` : ''
@@ -708,6 +718,15 @@ function showDetail(id) {
 
   // Ticket
   let tHtml = '';
+  if (c.ticketsToBuy) {
+    tHtml += `<div style="background:var(--re2);border-radius:10px;padding:14px 16px;display:flex;gap:10px;align-items:center;margin-bottom:10px">
+      <span style="font-size:22px">🎟</span>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--re)">Tickets nog te kopen</div>
+        <div style="font-size:12px;color:var(--re);opacity:.8;margin-top:2px">Officieel kanaal of Ticketswap</div>
+      </div>
+    </div>`;
+  }
   if (c.pdfPath) {
     tHtml += `<a class="tbtn pdf" href="${esc(getPdfUrl(c.pdfPath))}" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -795,6 +814,7 @@ function openForm(id) {
   document.getElementById('fimg-path').value = c?.imagePath || '';
   document.getElementById('furl').value = c?.ticketUrl || '';
   document.getElementById('fnotes-ticket').value = c?.ticketNotes || '';
+  document.getElementById('ftickbuy').checked = c?.ticketsToBuy || false;
   document.getElementById('ftickcount').value = c?.ticketCount || '';
   document.getElementById('fboughtby').value = c?.boughtBy || '';
   document.getElementById('fcomp').value = (c?.companions||[]).join(', ');
@@ -971,6 +991,7 @@ document.getElementById('savebtn').addEventListener('click', async () => {
       pdfPath,
       ticketUrl: document.getElementById('furl').value.trim(),
       ticketNotes: document.getElementById('fnotes-ticket').value.trim(),
+      ticketsToBuy: document.getElementById('ftickbuy').checked,
       ticketCount: parseInt(document.getElementById('ftickcount').value) || 0,
       boughtBy: document.getElementById('fboughtby').value.trim(),
       companions: document.getElementById('fcomp').value.split(',').map(s => s.trim()).filter(Boolean),
@@ -997,7 +1018,7 @@ function renderTickets() {
   const today = TODAY();
   const list = document.getElementById('tklist');
   const items = [...concerts]
-    .filter(c => c.pdfPath || c.ticketUrl || c.ticketNotes)
+    .filter(c => c.ticketsToBuy || c.pdfPath || c.ticketUrl || c.ticketNotes || c.ticketCount || c.boughtBy)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (!items.length) {
@@ -1027,7 +1048,9 @@ function renderTickets() {
 
     const people = (c.companions||[]).length + 1;
     let statusBadge = '';
-    if (c.ticketCount) {
+    if (c.ticketsToBuy) {
+      statusBadge = `<span class="tkstatus sell">🎟 Nog te kopen</span>`;
+    } else if (c.ticketCount) {
       const diff = c.ticketCount - people;
       if (diff > 0) statusBadge = `<span class="tkstatus sell">🎟 ${diff} over</span>`;
       else if (diff < 0) statusBadge = `<span class="tkstatus warn">⚠️ ${Math.abs(diff)} te weinig</span>`;
