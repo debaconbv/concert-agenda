@@ -267,13 +267,57 @@ input[type=checkbox].toggle:checked::after{transform:translateX(18px)}
 .tkstatus.warn{background:var(--ac2);color:var(--ac)}
 .tkstatus.sell{background:var(--re2);color:var(--re)}
 .tkbuyer{font-size:13px;color:var(--mu);margin-top:4px}
+/* PIN screen */
+#view-pin{background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:calc(var(--st) + 60px);gap:0}
+.pin-logo{font-size:52px;margin-bottom:16px;line-height:1}
+.pin-title{font-size:20px;font-weight:700;color:var(--tx);margin-bottom:6px}
+.pin-sub{font-size:14px;color:var(--mu);margin-bottom:40px}
+.pin-dots{display:flex;gap:18px;margin-bottom:40px}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--mu2);transition:background .15s,border-color .15s}
+.pin-dot.filled{background:var(--ac);border-color:var(--ac)}
+.pin-dot.error{background:var(--re);border-color:var(--re)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:260px}
+.pin-key{height:68px;border-radius:50%;border:none;background:var(--sf);color:var(--tx);font-size:24px;font-weight:400;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;transition:background .1s}
+.pin-key:active{background:var(--sf3)}
+.pin-key .sub{font-size:9px;letter-spacing:1.5px;color:var(--mu);font-weight:500}
+.pin-key.del{background:none;font-size:20px}
+.pin-key.del:active{background:var(--sf)}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.pin-dots.shake{animation:shake .35s ease}
 </style>
 </head>
 <body>
 <div id="app">
 
+  <!-- PIN SCREEN -->
+  <div class="view active" id="view-pin" style="display:flex">
+    <div class="pin-logo">🎤</div>
+    <div class="pin-title">Concertagenda</div>
+    <div class="pin-sub">Voer je PIN in</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-key" data-d="1">1<span class="sub"></span></button>
+      <button class="pin-key" data-d="2">2<span class="sub">ABC</span></button>
+      <button class="pin-key" data-d="3">3<span class="sub">DEF</span></button>
+      <button class="pin-key" data-d="4">4<span class="sub">GHI</span></button>
+      <button class="pin-key" data-d="5">5<span class="sub">JKL</span></button>
+      <button class="pin-key" data-d="6">6<span class="sub">MNO</span></button>
+      <button class="pin-key" data-d="7">7<span class="sub">PQRS</span></button>
+      <button class="pin-key" data-d="8">8<span class="sub">TUV</span></button>
+      <button class="pin-key" data-d="9">9<span class="sub">WXYZ</span></button>
+      <div></div>
+      <button class="pin-key" data-d="0">0</button>
+      <button class="pin-key del" id="pin-del">⌫</button>
+    </div>
+  </div>
+
   <!-- SETUP / CONFIG -->
-  <div class="view active" id="view-setup">
+  <div class="view" id="view-setup">
     <div class="hdr"><span class="hdr-title">🎵 Concertagenda — Setup</span></div>
     <div style="flex:1;overflow-y:auto;padding:16px 16px calc(20px + var(--sb));display:flex;flex-direction:column;gap:16px">
       <p class="setup-sub">Eenmalige setup: maak een gratis Supabase-project aan. Je concerten en tickets worden dan gesynchroniseerd op al je toestellen.</p>
@@ -1471,7 +1515,56 @@ document.getElementById('disconnect-btn').onclick = () => {
   }
 };
 
-init();
+// ─── PIN ─────────────────────────────────────────────────────────────────────
+const PIN_CORRECT = '0306';
+const CFG_PIN     = 'concertagenda_pin';
+
+(function initPin() {
+  if (localStorage.getItem(CFG_PIN) === 'ok') { show('agenda'); init(); return; }
+
+  let entered = '';
+  const dots  = document.getElementById('pin-dots');
+
+  function updateDots() {
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('pd' + i).classList.toggle('filled', i < entered.length);
+      document.getElementById('pd' + i).classList.remove('error');
+    }
+  }
+
+  function wrong() {
+    for (let i = 0; i < 4; i++) document.getElementById('pd' + i).classList.add('error');
+    dots.classList.add('shake');
+    dots.addEventListener('animationend', () => {
+      dots.classList.remove('shake');
+      entered = '';
+      updateDots();
+    }, { once: true });
+  }
+
+  function press(d) {
+    if (entered.length >= 4) return;
+    entered += d;
+    updateDots();
+    if (entered.length === 4) {
+      if (entered === PIN_CORRECT) {
+        localStorage.setItem(CFG_PIN, 'ok');
+        show('agenda');
+        init();
+      } else {
+        setTimeout(wrong, 120);
+      }
+    }
+  }
+
+  document.querySelectorAll('.pin-key[data-d]').forEach(btn =>
+    btn.addEventListener('click', () => press(btn.dataset.d))
+  );
+  document.getElementById('pin-del').addEventListener('click', () => {
+    entered = entered.slice(0, -1);
+    updateDots();
+  });
+})();
 </script>
 </body>
 </html>
