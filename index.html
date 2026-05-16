@@ -85,7 +85,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .list{flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;min-height:0;padding:10px 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:calc(100px + var(--sb))}
 
 /* Card */
-.card{background:var(--sf);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;gap:14px;align-items:flex-start;border:.5px solid var(--bd);-webkit-tap-highlight-color:transparent}
+.card{background:var(--sf);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;gap:14px;align-items:flex-start;border:.5px solid var(--bd);-webkit-tap-highlight-color:transparent;flex-shrink:0}
 .card:active{background:var(--sf2)}
 .card.past{opacity:.5}
 .dblock{flex-shrink:0;text-align:center;min-width:40px}
@@ -212,7 +212,7 @@ input[type=checkbox].toggle:checked::after{transform:translateX(18px)}
 
 /* Stats */
 .stats-body{flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;min-height:0;padding:12px 16px calc(90px + var(--sb));display:flex;flex-direction:column;gap:12px}
-.stat-widget{background:var(--sf);border-radius:14px;overflow:hidden;border:.5px solid var(--bd)}
+.stat-widget{background:var(--sf);border-radius:14px;overflow:hidden;border:.5px solid var(--bd);flex-shrink:0}
 .stat-title{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--mu);font-weight:600;padding:14px 16px 0}
 .overview-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--bd)}
 .ov-cell{background:var(--sf);padding:14px 12px;text-align:center}
@@ -247,7 +247,7 @@ input[type=checkbox].toggle:checked::after{transform:translateX(18px)}
 
 /* Tickets view */
 .tklist{flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;min-height:0;padding:10px 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:calc(80px + var(--sb))}
-.tkcard{background:var(--sf);border-radius:14px;border:.5px solid var(--bd);overflow:hidden}
+.tkcard{background:var(--sf);border-radius:14px;border:.5px solid var(--bd);overflow:hidden;flex-shrink:0}
 .tkcard-head{display:flex;align-items:center;gap:14px;padding:14px 16px}
 .tkcard-info{flex:1;min-width:0}
 .tkcard-name{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1174,7 +1174,7 @@ function renderTickets() {
   const today = TODAY();
   const list = document.getElementById('tklist');
   const items = [...concerts]
-    .filter(c => c.ticketsToBuy || c.pdfPath || c.ticketUrl || c.ticketNotes || c.ticketCount || c.boughtBy)
+    .filter(c => c.pdfPath || c.ticketUrl || c.ticketNotes || c.ticketCount || c.boughtBy)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (!items.length) {
@@ -1227,7 +1227,7 @@ function renderTickets() {
           ${statusBadge ? `<div style="margin-top:6px">${statusBadge}</div>` : ''}
         </div>
       </div>
-      <div class="tkcard-body">${btns}${notes}</div>
+      ${(btns || notes) ? `<div class="tkcard-body">${btns}${notes}</div>` : ''}
     </div>`;
   }).join('');
 }
