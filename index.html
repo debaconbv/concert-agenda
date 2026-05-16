@@ -24,7 +24,7 @@
 html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
 #app{height:100dvh;display:flex;flex-direction:column;max-width:600px;margin:0 auto;overflow:hidden}
 
-.view{flex:1;display:none;flex-direction:column;min-height:0;overflow:hidden}
+.view{flex:1;display:none;flex-direction:column;min-height:0}
 .view.active{display:flex}
 
 /* Compact settings panel */
@@ -724,9 +724,15 @@ async function deletePdf(path) {
 // ─── UI HELPERS ──────────────────────────────────────────────────────────────
 function show(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('view-' + id).classList.add('active');
+  const view = document.getElementById('view-' + id);
+  view.classList.add('active');
   const tabbarViews = ['agenda', 'tickets', 'stats'];
   showTabBar(tabbarViews.includes(id));
+  // Force iOS Safari to re-evaluate scroll containers after display change
+  requestAnimationFrame(() => {
+    const scroller = view.querySelector('.list,.tklist,.stats-body,.dbody,.fbody,.settings-body');
+    if (scroller) { scroller.scrollTop = scroller.scrollTop; }
+  });
 }
 
 function setSyncing(state) {
