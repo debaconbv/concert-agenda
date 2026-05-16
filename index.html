@@ -268,7 +268,7 @@ input[type=checkbox].toggle:checked::after{transform:translateX(18px)}
 .tkstatus.sell{background:var(--re2);color:var(--re)}
 .tkbuyer{font-size:13px;color:var(--mu);margin-top:4px}
 /* PIN screen */
-#view-pin{background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:calc(var(--st) + 60px);gap:0}
+#view-pin{background:var(--bg);flex-direction:column;align-items:center;justify-content:flex-start;padding-top:calc(var(--st) + 60px);gap:0}
 .pin-logo{font-size:52px;margin-bottom:16px;line-height:1}
 .pin-title{font-size:20px;font-weight:700;color:var(--tx);margin-bottom:6px}
 .pin-sub{font-size:14px;color:var(--mu);margin-bottom:40px}
@@ -290,7 +290,7 @@ input[type=checkbox].toggle:checked::after{transform:translateX(18px)}
 <div id="app">
 
   <!-- PIN SCREEN -->
-  <div class="view active" id="view-pin" style="display:flex">
+  <div class="view active" id="view-pin">
     <div class="pin-logo">🎤</div>
     <div class="pin-title">Concertagenda</div>
     <div class="pin-sub">Voer je PIN in</div>
