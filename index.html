@@ -22,10 +22,10 @@
   --sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px);
 }
 html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
-#app{height:100dvh;display:flex;flex-direction:column;max-width:600px;margin:0 auto;overflow:hidden}
+#app{height:100dvh;display:flex;flex-direction:column;max-width:600px;margin:0 auto;overflow:hidden;position:relative}
 
-.view{flex:1;display:none;flex-direction:column;min-height:0}
-.view.active{display:flex}
+.view{position:absolute;inset:0;display:flex;flex-direction:column;visibility:hidden;pointer-events:none}
+.view.active{visibility:visible;pointer-events:auto}
 
 /* Compact settings panel */
 .settings-body{flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;min-height:0;padding:24px 16px calc(20px + var(--sb));display:flex;flex-direction:column;gap:20px}
@@ -724,15 +724,9 @@ async function deletePdf(path) {
 // ─── UI HELPERS ──────────────────────────────────────────────────────────────
 function show(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const view = document.getElementById('view-' + id);
-  view.classList.add('active');
+  document.getElementById('view-' + id).classList.add('active');
   const tabbarViews = ['agenda', 'tickets', 'stats'];
   showTabBar(tabbarViews.includes(id));
-  // Force iOS Safari to re-evaluate scroll containers after display change
-  requestAnimationFrame(() => {
-    const scroller = view.querySelector('.list,.tklist,.stats-body,.dbody,.fbody,.settings-body');
-    if (scroller) { scroller.scrollTop = scroller.scrollTop; }
-  });
 }
 
 function setSyncing(state) {
