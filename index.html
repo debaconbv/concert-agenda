@@ -587,6 +587,8 @@ alter table store disable row level security;</div>
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
+const DEFAULT_URL = 'https://cozhamtpdrzktkylhxcl.supabase.co';
+const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvemhhbXRwZHJ6a3RreWxoeGNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MzQ3MjQsImV4cCI6MjA5NDAxMDcyNH0.bBlSakpxweQYr00Qh4p4UzAF4QTHLlbirlMjcLJmqWE';
 const CFG_URL    = 'concertagenda_url';
 const CFG_KEY    = 'concertagenda_key';
 const CFG_STATS  = 'concertagenda_stats';
@@ -607,16 +609,12 @@ let realtimeChannel = null;
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
   showTabBar(false);
-  const url = localStorage.getItem(CFG_URL);
-  const key = localStorage.getItem(CFG_KEY);
-  if (url && key) {
-    sb = supabase.createClient(url, key);
-    show('agenda');
-    await loadConcerts();
-    subscribeRealtime();
-  } else {
-    show('setup');
-  }
+  const url = localStorage.getItem(CFG_URL) || DEFAULT_URL;
+  const key = localStorage.getItem(CFG_KEY) || DEFAULT_KEY;
+  sb = supabase.createClient(url, key);
+  show('agenda');
+  await loadConcerts();
+  subscribeRealtime();
 }
 
 // ─── SUPABASE ────────────────────────────────────────────────────────────────
@@ -1418,8 +1416,8 @@ document.getElementById('back-settings').onclick = () => show('agenda');
 document.getElementById('fab').onclick = () => { curId = null; openForm(null); };
 
 document.getElementById('settings-btn').onclick = () => {
-  const url = localStorage.getItem(CFG_URL) || '';
-  document.getElementById('cfg-display-url').textContent = url.replace('https://','').replace('.supabase.co','') + '.supabase.co' || '—';
+  const url = localStorage.getItem(CFG_URL) || DEFAULT_URL;
+  document.getElementById('cfg-display-url').textContent = url.replace('https://','').replace('.supabase.co','') + '.supabase.co';
   document.getElementById('cfg-display-status').textContent = sb ? 'Actief ✓' : 'Niet verbonden';
   document.getElementById('cfg-url2').value = '';
   document.getElementById('cfg-key2').value = '';
