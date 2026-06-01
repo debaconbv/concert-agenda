@@ -139,6 +139,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
 /* Form */
 .fbody{flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;min-height:0;padding:16px 16px calc(20px + var(--sb));display:flex;flex-direction:column;gap:18px}
+.fbody>*{flex-shrink:0}
 .fgrp{display:flex;flex-direction:column;gap:6px}
 .flbl{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);font-weight:600}
 .finp,.ftxt{background:var(--sf);border:.5px solid var(--bd);border-radius:10px;padding:12px 14px;font-size:16px;color:var(--tx);outline:none;width:100%;-webkit-appearance:none;font-family:inherit}
@@ -176,8 +177,8 @@ input[type=checkbox].toggle{appearance:none;-webkit-appearance:none;width:44px;h
 input[type=checkbox].toggle::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
 input[type=checkbox].toggle:checked{background:var(--gr)}
 input[type=checkbox].toggle:checked::after{transform:translateX(18px)}
-.collapsible{display:none}
-.collapsible.open{display:block}
+.collapsible{height:0;overflow:hidden;flex-shrink:0}
+.collapsible.open{height:auto}
 /* Image upload */
 .imgdrop{border:1.5px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;color:var(--mu);font-size:14px;transition:border-color .2s,background .2s;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;align-items:center;gap:6px}
 .imgdrop:active,.imgdrop.drag{border-color:var(--ac);background:var(--ac2);color:var(--ac)}
